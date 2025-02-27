@@ -1,0 +1,19 @@
+---
+title: "assignment.Rmd"
+author: "Valerie Heckendorn"
+output: html_document
+date: "2025-02-27"
+---
+
+BiocManager::install(c("GenomicRanges", "rtracklayer", "EnrichedHeatmap", "AnnotationHub", 
+                       "ensembldb", "edgeR", "esATAC", "sechm", "motifmatchr","rGREAT",
+                       "bsseq","DMRcate","data.table","InteractionSet","limma",
+                       "universalmotif", "MotifDb", "TFBSTools", "Biostrings", "PWMEnrich",
+                       "Rsubread","Rfastp"))
+BiocManager::install(c("Bioconductor/BiocFileCache", "chromVAR"))
+BiocManager::install("ETHZ-INS/epiwraps")
+
+```
+library(epiwraps)
+sessionInfo()
+```
