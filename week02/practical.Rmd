@@ -54,19 +54,26 @@ width(flyExons[1])
 myRegions <- as(c("2L:1200000-1200100", "2L:13513712-13519712"), "GRanges")
 myRegions
 
+# for each genes, whether or not it overlaps anything in `myRegions` :
 head(overlapsAny(genes, myRegions))
+# this is different from asking, for each of myRegions, whether or not it overlaps anything in `genes` :
+# head(overlapsAny(myRegions genes))
 
+# This what indices of `genes` (query) overlaps with what indices of `myRegions` (subject) :
 overlaps <- findOverlaps(genes, myRegions)
 head(overlaps)
-
 genes[2429]
+
+# we could also add, in the `myRegions` object, what gene overlaps it:
 myRegions$genes <- NA
 myRegions$genes[subjectHits(overlaps)] <- genes$gene_name[queryHits(overlaps)]
-cbind(mcols(myRegions)[subjectHits(overlaps),],
-        mcols(genes)[queryHits(overlaps),])
 head(myRegions)
+# this only works if there are single overlaps though. One alternative is to merge
+# the metadata of the overlapping ranges of the two objects:
+overlaps2 <- cbind( mcols(myRegions)[subjectHits(overlaps),],
+                    mcols(genes)[queryHits(overlaps),] )
 
-overlaps2 <- findOverlapPairs(genes, myRegions)
+# overlaps2 <- findOverlapPairs(genes, myRegions)
 
 genes[which(overlapsAny(genes, myRegions))]
 
@@ -79,7 +86,7 @@ head(d)
 plotSignalTracks(list(myRegions=myRegions), region = "2L:13513712-13519712",
                  ensdb = ensdb, extend = 100000, transcripts="full")
 
-grep("Trx", genes$symbol, value=TRUE)
+# grep("Trx", genes$symbol, value=TRUE)
 plotSignalTracks(list(myRegions=myRegions), region = "TrxT",
                  ensdb = ensdb, extend = 100000, transcripts="full")
 ```
