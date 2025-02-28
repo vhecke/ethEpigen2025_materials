@@ -1,7 +1,7 @@
 ---
 title: "Practical - Week 2"
 author: "Pierre-Luc"
-date: "2024-03-01"
+date: "2025-02-28"
 output: html_document
 ---
 
@@ -16,57 +16,71 @@ suppressPackageStartupMessages({
 
 ```{r}
 ah <- AnnotationHub()
-q <- query(ah, c("Drosophila", "EnsDb"))
+query_results <- query(ah, c("Drosophila", "EnsDb"))
 
 ensdb <- ah[["AH113629"]]
 ensdb
 ```
 
 ```{r}
-g <- genes(ensdb)
-head(g)
+genes <- genes(ensdb)
+genes
 
-table(g$gene_biotype)
+prcg <- genes[which(genes$gene_biotype=="protein_coding")]
+prcg
+# equivalent:
+prcg <- genes(ensdb, filter=GeneBiotypeFilter("protein_coding"))
 
-length(g)
-pcg <- g[which(g$gene_biotype=="protein_coding")]
-length(pcg)
+length(unique(genes$gene_name))
 
-ex <- exons(ensdb)
-ex <- exonsBy(ensdb) # same but grouped by transcript
-head(ex)
+flyTrancripts <- transcripts(ensdb)
+# seqnames, start, end, or the strand -> use the function of that name:
+flyTrancripts2L <- flyTrancripts[which(seqnames(flyTrancripts)=="2L")]
+head(flyTrancripts2L)
 
-numExonsPerTx <- lengths(ex)
-head(numExonsPerTx)
-hist(numExonsPerTx)
+as.character(head(seqnames(flyTrancripts2L)))
 
 
-# we limit ourselves to protein-coding transcripts:
-exsPerTx <- exonsBy(ensdb, column=c("tx_id","tx_biotype"), 
-                    filter=TxBiotypeFilter("protein_coding"))
-exsPerTx
-hist(lengths(exsPerTx))
+flyExons <- exons(ensdb, columns=c("transcript_id", "gene_name"))
+head(flyExons)
+
+flyExons2 <- exonsBy(ensdb)
+flyExons2[head(which(lengths(flyExons2)>1))]
+width(flyExons[1])
 ```
-
-Selecting transcripts from one chromosome:
 
 ```{r}
-txs <- transcripts(ensdb)
-txs_2L <- txs[seqnames(txs)=="2L"] 
+# seqlengths(ensdb)
+myRegions <- as(c("2L:1200000-1200100", "2L:13513712-13519712"), "GRanges")
+myRegions
+
+head(overlapsAny(genes, myRegions))
+
+overlaps <- findOverlaps(genes, myRegions)
+head(overlaps)
+
+genes[2429]
+myRegions$genes <- NA
+myRegions$genes[subjectHits(overlaps)] <- genes$gene_name[queryHits(overlaps)]
+cbind(mcols(myRegions)[subjectHits(overlaps),],
+        mcols(genes)[queryHits(overlaps),])
+head(myRegions)
+
+overlaps2 <- findOverlapPairs(genes, myRegions)
+
+genes[which(overlapsAny(genes, myRegions))]
+
+d <- distanceToNearest(myRegions, genes)
+head(d)
 ```
 
-
-
-
-Example of overlapping GRanges objects:
 
 ```{r}
-# we create a new GRanges
-gr <- as("2L:14615552-14616552", "GRanges")
-gr <- GRanges(seqname=c("2L","2L"), 
-              ranges=IRanges(start=c(14615552, 14616303),
-                      end=c(14615552+10, 14616303+20)))
-gr
-```
+plotSignalTracks(list(myRegions=myRegions), region = "2L:13513712-13519712",
+                 ensdb = ensdb, extend = 100000, transcripts="full")
 
+grep("Trx", genes$symbol, value=TRUE)
+plotSignalTracks(list(myRegions=myRegions), region = "TrxT",
+                 ensdb = ensdb, extend = 100000, transcripts="full")
+```
 
