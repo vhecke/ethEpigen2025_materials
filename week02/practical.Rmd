@@ -1,0 +1,72 @@
+---
+title: "Practical - Week 2"
+author: "Pierre-Luc"
+date: "2024-03-01"
+output: html_document
+---
+
+```{r}
+suppressPackageStartupMessages({
+  library(AnnotationHub) # to fetch genomes, annotations, etc.
+  library(ensembldb)     # to manipulate ensembl gene annotations
+  library(GenomicRanges) # data structure for genomic ranges 
+  library(epiwraps)      # visualization
+})
+```
+
+```{r}
+ah <- AnnotationHub()
+q <- query(ah, c("Drosophila", "EnsDb"))
+
+ensdb <- ah[["AH113629"]]
+ensdb
+```
+
+```{r}
+g <- genes(ensdb)
+head(g)
+
+table(g$gene_biotype)
+
+length(g)
+pcg <- g[which(g$gene_biotype=="protein_coding")]
+length(pcg)
+
+ex <- exons(ensdb)
+ex <- exonsBy(ensdb) # same but grouped by transcript
+head(ex)
+
+numExonsPerTx <- lengths(ex)
+head(numExonsPerTx)
+hist(numExonsPerTx)
+
+
+# we limit ourselves to protein-coding transcripts:
+exsPerTx <- exonsBy(ensdb, column=c("tx_id","tx_biotype"), 
+                    filter=TxBiotypeFilter("protein_coding"))
+exsPerTx
+hist(lengths(exsPerTx))
+```
+
+Selecting transcripts from one chromosome:
+
+```{r}
+txs <- transcripts(ensdb)
+txs_2L <- txs[seqnames(txs)=="2L"] 
+```
+
+
+
+
+Example of overlapping GRanges objects:
+
+```{r}
+# we create a new GRanges
+gr <- as("2L:14615552-14616552", "GRanges")
+gr <- GRanges(seqname=c("2L","2L"), 
+              ranges=IRanges(start=c(14615552, 14616303),
+                      end=c(14615552+10, 14616303+20)))
+gr
+```
+
+
