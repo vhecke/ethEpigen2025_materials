@@ -1,0 +1,93 @@
+---
+title: "Practical - Week 2"
+author: "Pierre-Luc"
+date: "2025-02-28"
+output: html_document
+---
+
+```{r}
+suppressPackageStartupMessages({
+  library(AnnotationHub) # to fetch genomes, annotations, etc.
+  library(ensembldb)     # to manipulate ensembl gene annotations
+  library(GenomicRanges) # data structure for genomic ranges 
+  library(epiwraps)      # visualization
+})
+```
+
+```{r}
+ah <- AnnotationHub()
+query_results <- query(ah, c("Drosophila", "EnsDb"))
+
+ensdb <- ah[["AH113629"]]
+ensdb
+```
+
+```{r}
+genes <- genes(ensdb)
+genes
+
+prcg <- genes[which(genes$gene_biotype=="protein_coding")]
+prcg
+# equivalent:
+prcg <- genes(ensdb, filter=GeneBiotypeFilter("protein_coding"))
+
+length(unique(genes$gene_name))
+
+flyTrancripts <- transcripts(ensdb)
+# seqnames, start, end, or the strand -> use the function of that name:
+flyTrancripts2L <- flyTrancripts[which(seqnames(flyTrancripts)=="2L")]
+head(flyTrancripts2L)
+
+as.character(head(seqnames(flyTrancripts2L)))
+
+
+flyExons <- exons(ensdb, columns=c("transcript_id", "gene_name"))
+head(flyExons)
+
+flyExons2 <- exonsBy(ensdb)
+flyExons2[head(which(lengths(flyExons2)>1))]
+width(flyExons[1])
+```
+
+```{r}
+# seqlengths(ensdb)
+myRegions <- as(c("2L:1200000-1200100", "2L:13513712-13519712"), "GRanges")
+myRegions
+
+# for each genes, whether or not it overlaps anything in `myRegions` :
+head(overlapsAny(genes, myRegions))
+# this is different from asking, for each of myRegions, whether or not it overlaps anything in `genes` :
+# head(overlapsAny(myRegions genes))
+
+# This what indices of `genes` (query) overlaps with what indices of `myRegions` (subject) :
+overlaps <- findOverlaps(genes, myRegions)
+head(overlaps)
+genes[2429]
+
+# we could also add, in the `myRegions` object, what gene overlaps it:
+myRegions$genes <- NA
+myRegions$genes[subjectHits(overlaps)] <- genes$gene_name[queryHits(overlaps)]
+head(myRegions)
+# this only works if there are single overlaps though. One alternative is to merge
+# the metadata of the overlapping ranges of the two objects:
+overlaps2 <- cbind( mcols(myRegions)[subjectHits(overlaps),],
+                    mcols(genes)[queryHits(overlaps),] )
+
+# overlaps2 <- findOverlapPairs(genes, myRegions)
+
+genes[which(overlapsAny(genes, myRegions))]
+
+d <- distanceToNearest(myRegions, genes)
+head(d)
+```
+
+
+```{r}
+plotSignalTracks(list(myRegions=myRegions), region = "2L:13513712-13519712",
+                 ensdb = ensdb, extend = 100000, transcripts="full")
+
+# grep("Trx", genes$symbol, value=TRUE)
+plotSignalTracks(list(myRegions=myRegions), region = "TrxT",
+                 ensdb = ensdb, extend = 100000, transcripts="full")
+```
+
