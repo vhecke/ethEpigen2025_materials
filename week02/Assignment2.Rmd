@@ -1,0 +1,65 @@
+---
+title: "Assignment2"
+author: "Valerie Heckendorn"
+output: html_document
+date: "2025-03-04"
+---
+
+```{r}
+suppressPackageStartupMessages({
+  library(AnnotationHub) # to fetch genomes, annotations, etc.
+  library(ensembldb)     # to manipulate ensembl gene annotations
+  library(GenomicRanges) # data structure for genomic ranges 
+  library(epiwraps)      # visualization
+})
+```
+
+1)  Using AnnotationHub find and download the mouse (Mus Musculus) EnsDb object, version 102, genome build GRCm38. The mouse genome sequence ( dna_sm ) in TwoBit/2bit format for GRCm38 and the drosophila melanogaster genome sequence ( dna_sm ) in TwoBit/2bit format for BDGP6.
+
+```{r}
+ah <- AnnotationHub() 
+query_results <- query(ah, c("Mus Musculus", "EnsDb", "GRCm38", "102")) # to find the mouse Ensdb object, version 102, genome build GRCm38
+query_results
+
+ensdb <- ah[["AH89211"]] # retrieve record 
+ensdb
+```
+
+```{r}
+query_genomesequence <- query(ah, c("Mus Musculus", "GRCm38", "dna_sm", "2bit")) # find mouse genome sequence
+query_genomesequence
+
+query_drosophila <- query(ah, c("Drosophila","BDGP6", "dna_sm", "2bit")) # find drosophila genome sequence
+query_drosophila
+```
+
+2.1) Using the mouse EnsDb, find how many different ensembl gene IDs and gene symbols there are for protein-coding genes
+
+```{r}
+genes <- genes(ensdb)
+genes
+
+prcg <- genes[which(genes$gene_biotype=="protein_coding")] # finds the protein coding genes in ensdb
+
+unique_gene_id <- unique(prcg$gene_id) # removes duplicates from prcgIDs
+length_gene_id <- length(unique_gene_id) # number of the unique prcgIDs
+length_gene_id
+
+unique_symbol <- unique(prcg$symbol) # removes duplicates from prcg symbols
+length_symbol <- length(unique_symbol) # number of unique prcg symbols
+length_symbol
+```
+
+2.2) Plot the distribution of the (spliced) length of protein-coding transcripts
+
+```{r}
+mouse_exons_prcg <- exonsBy(ensdb, by="tx", filter=TxBiotypeFilter("protein_coding")) # pr-coding-mouse-exons by transcripts
+mouse_exons_prcg
+```
+
+```{r}
+sum_mouse_ex <- sum(width(mouse_exons_prcg)) # summing the width of the exons per transcript
+sum_mouse_ex_df <- data.frame(transcript_id = names(sum_mouse_ex), spliced_length = sum_mouse_ex)
+
+hist(sum_mouse_ex_df$spliced_length, main="Distribution of spliced length of protein-coding transcripts", xlab= "Length (bp)") # Plot
+```
