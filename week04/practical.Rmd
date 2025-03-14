@@ -32,7 +32,7 @@ unzip("w04_practical.zip")
 # Visualizing a single region
 
 ```{r}
-peaks <- rtracklayer::import("peaks/ctcf.narrowPeak")
+peaks <- rtracklayer::import("peaks/ctcf.narrowPeak", format="narrowPeak")
 # when we download from ENCODE, peaks lack the narrowPeak extension but are still
 # in that format, so we might need to specify the format, e.g.:
 # peaks <- rtracklayer::import("peaks/ctcf.bed", format="narrowPeak")
@@ -43,6 +43,7 @@ tracks <- list(CTCF="aligned/ctcf.bam", Input="aligned/input.bam", peaks=peaks)
 plotSignalTracks( files=tracks, region=peaks[1], extend=2000)
 # put them on the same scale:
 plotSignalTracks( files=tracks, region=peaks[1], extend=2000, tracks.params = list(ylim=c(0,55)))
+plotSignalTracks( files=tracks, region=peaks[1], extend=2000, tracks.params = list(ylim=c(0,55)), type="alignment")
 ```
 
 
@@ -70,8 +71,69 @@ dir.create("tracks")
 epiwraps::bam2bw("aligned/ctcf.bam", "tracks/ctcf_full.bw", binWidth=1, extend=100, scaling=TRUE)
 epiwraps::bam2bw("aligned/ctcf.bam", "tracks/ctcf.bw", binWidth=20, extend=100, scaling=TRUE)
 epiwraps::bam2bw("aligned/input.bam", "tracks/input.bw", binWidth=20, extend=100, scaling=TRUE)
+
+# if the data is single-end and we do not know the average fragment size, use ?epiwraps::estimateFragSize
+# if paired-end reads, use paired=TRUE
+```
+
+
+```{r}
+tracks <- list(CTCF_full="tracks/ctcf_full.bw", CTCF="tracks/ctcf.bw", input="tracks/input.bw", peaks=peaks)
+plotSignalTracks( files=tracks, region=peaks[1], extend=3000)
+# put them on the same scale:
+plotSignalTracks( files=tracks, region=peaks[1], extend=10000, tracks.params = list(ylim=c(0,170)), 
+                  ensdb = ensdb,  transcripts = "full" )
+```
+
+
+# Visualizing multiple peaks at the same time
+
+
+```{r}
+tracks <- list(CTCF="tracks/ctcf.bw", input="tracks/input.bw")
+ese <- signal2Matrix(tracks, regions = peaks, extend = 2000)
+plotEnrichedHeatmaps(ese, row_title="My CTCF peaks")
+# function based on the EnrichedHeatmap package, itself based on ComplexHeatmap
+```
+
+
+```{r}
+meanEnrichment <- rowMeans(score(ese))
+ese2 <- ese[which(meanEnrichment >= median(meanEnrichment)), ]
+ese2
+plotEnrichedHeatmaps(ese2, row_title="My strong CTCF peaks")
+```
+
+An example of a bad ChIP:
+
+```{r}
+myc_peaks <- import("peaks/myc.narrowPeak")
+obj <- signal2Matrix(list(Myc="tracks/myc.bw"), regions = myc_peaks)
+plotEnrichedHeatmaps(obj)
+```
+
+
+# Signal relative to the input
+
+```{r}
+epiwraps::bam2bw(bamfile="aligned/ctcf.bam", bgbam="aligned/input.bam", output_bw = "tracks/ctcf_log2FE.bw", binWidth=20, extend=100)
+
+tracks <- list(CTCF="tracks/ctcf.bw", CTCF_log2FE="tracks/ctcf_log2FE.bw", input="tracks/input.bw")
+ese <- signal2Matrix(tracks, regions = peaks, extend = 2000)
+plotEnrichedHeatmaps(ese, row_title="My CTCF peaks", multiScale = TRUE)
+
 ```
 
 
 
-To be continued during the course...
+```{r}
+# subset my ESE object to the peaks that overlap promoters
+proms <- promoters(transcripts(ensdb))
+ese_promoters <- ese[overlapsAny(ese, proms, type="within"),]
+
+peaks2 <- annotateRegions(peaks, ensdb)
+head(peaks2)
+table(peaks2$class)
+```
+
+(similar results can be obtained e.g. with the ChIPseeker package)
