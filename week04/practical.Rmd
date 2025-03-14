@@ -1,0 +1,77 @@
+---
+title: "Exploration of processed ChIP-seq data"
+author: "Pierre-Luc"
+output: html_document
+---
+
+```{r}
+suppressPackageStartupMessages({
+  library(AnnotationHub)
+  library(rtracklayer)
+  library(epiwraps)
+  library(GenomicRanges)
+})
+ah <- AnnotationHub()
+ensdb <- ah[["AH95713"]] # Drosophila EnsDb
+```
+
+
+# Downloading the processed data
+
+We will follow-up on what we did last week, starting with already aligned reads and peaks from a different dataset (ChIP for CTCF in Drosophila S2 cells, subsetting to the chromosome 2L only).
+
+You can download this data like this:
+
+```{r, eval=FALSE}
+download.file("https://ethz-ins.org/content/w04_practical.zip", "w04_practical.zip")
+unzip("w04_practical.zip")
+```
+
+
+
+# Visualizing a single region
+
+```{r}
+peaks <- rtracklayer::import("peaks/ctcf.narrowPeak")
+# when we download from ENCODE, peaks lack the narrowPeak extension but are still
+# in that format, so we might need to specify the format, e.g.:
+# peaks <- rtracklayer::import("peaks/ctcf.bed", format="narrowPeak")
+head(peaks)
+peaks[1]
+
+tracks <- list(CTCF="aligned/ctcf.bam", Input="aligned/input.bam", peaks=peaks)
+plotSignalTracks( files=tracks, region=peaks[1], extend=2000)
+# put them on the same scale:
+plotSignalTracks( files=tracks, region=peaks[1], extend=2000, tracks.params = list(ylim=c(0,55)))
+```
+
+
+# Generating coverage tracks
+
+Again here I'm providing two ways of doing this, first the non-R version that's the most widely used, and then a R-based version, both of which should be equivalent.
+
+## Using DeepTools
+
+
+```{bash engine.opts='-l', eval=FALSE}
+mkdir -p tracks
+for bamfile in aligned/*.bam; do
+  bamCoverage -p 4 --binSize 20 --normalizeUsing CPM -b $bamfile -o tracks/`basename $bamfile .bam`.bw
+done
+```
+
+
+## Using R
+
+In this example I'll showcase the binning by generating two tracks (i.e. bigwigs) for the IP:
+
+```{r}
+dir.create("tracks")
+epiwraps::bam2bw("aligned/ctcf.bam", "tracks/ctcf_full.bw", binWidth=1, extend=100, scaling=TRUE)
+epiwraps::bam2bw("aligned/ctcf.bam", "tracks/ctcf.bw", binWidth=20, extend=100, scaling=TRUE)
+epiwraps::bam2bw("aligned/input.bam", "tracks/input.bw", binWidth=20, extend=100, scaling=TRUE)
+```
+
+
+
+To be continued during the course...
