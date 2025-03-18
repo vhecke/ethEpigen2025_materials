@@ -1,0 +1,111 @@
+---
+title: "assignment"
+author: "Valerie Heckendorn"
+date: "2025-03-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+suppressPackageStartupMessages({
+  library(AnnotationHub)
+  library(rtracklayer)
+  library(epiwraps)
+  library(GenomicRanges)
+  library(R.utils)
+  library(MASS)
+})
+```
+
+# load bed files
+
+```{r}
+bed_p300 <- rtracklayer::import("ENCFF460EOA.bed", format="narrowPeak")
+head(bed_p300)
+```
+
+```{r}
+bed_H3K4me3 <- rtracklayer::import("ENCFF974BMC.bed", format = "narrowPeak")
+head(bed_H3K4me3)
+```
+
+```{r}
+bed_H3K4me1 <- rtracklayer::import("ENCFF426IIV.bed", format = "narrowPeak")
+head(bed_H3K4me1)
+```
+
+```{r}
+bed_H3K27ac <- rtracklayer::import("ENCFF274UIB.bed", format = "narrowPeak")
+head(bed_H3K27ac)
+```
+
+```{r}
+bed_H3K27me3 <- rtracklayer::import("ENCFF008XKX.bed", format = "narrowPeak")
+head(bed_H3K27me3)
+```
+
+# of the p300 peaks, what proportion overlap each of the marks?
+
+```{r}
+peaks_300 <- length(bed_p300)
+peaks_300
+```
+
+## overlap p300 & H3K4me3
+
+```{r}
+overlap_H3K4me3 <- overlapsAny(bed_p300, bed_H3K4me3)
+sum_H3K4me3 <- sum(overlap_H3K4me3)
+sum_H3K4me3
+```
+
+```{r}
+proportion_H3K4me3 <- round((100/peaks_300*sum_H3K4me3),2)
+proportion_H3K4me3
+print(paste("A total of", proportion_H3K4me3 ,"% of H3K4me3 peaks overlap with the p300 peaks"))
+```
+
+## overlap p300 & H3K4me1
+
+```{r}
+overlap_H3K4me1 <- overlapsAny(bed_p300, bed_H3K4me1)
+sum_H3K4me1 <- sum(overlap_H3K4me1)
+sum_H3K4me1
+```
+
+```{r}
+proportion_H3K4me1 <- round((100/peaks_300*sum_H3K4me1),2)
+proportion_H3K4me1
+print(paste("A total of", proportion_H3K4me1 ,"% of H3K4me1 peaks overlap with the p300 peaks"))
+```
+
+## overlap p300 & H3K27ac
+
+```{r}
+overlap_H3K27ac <- overlapsAny(bed_p300, bed_H3K27ac)
+sum_H3K27ac <- sum(overlap_H3K27ac)
+sum_H3K27ac
+```
+
+```{r}
+proportion_H3K27ac <- round((100/peaks_300*sum_H3K27ac),2)
+proportion_H3K27ac
+print(paste("A total of", proportion_H3K27ac ,"% of H3K27ac peaks overlap with the p300 peaks"))
+```
+
+## overlap p300 & H3K27me3
+
+```{r}
+overlap_H3K27me3 <- overlapsAny(bed_p300, bed_H3K27me3)
+sum_H3K27me3 <- sum(overlap_H3K27me3)
+sum_H3K27me3
+```
+
+```{r}
+proportion_H3K27me3 <- round((100/peaks_300*sum_H3K27me3),2)
+proportion_H3K27me3
+print(paste("A total of", proportion_H3K27me3 ,"% of H3K27me3 peaks overlap with the p300 peaks"))
+```
