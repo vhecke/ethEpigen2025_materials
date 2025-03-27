@@ -1,0 +1,70 @@
+---
+title: "assignment"
+author: "Valerie Heckendorn"
+date: "2025-03-25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+suppressPackageStartupMessages({
+  library(AnnotationHub)
+  library(rtracklayer)
+  library(epiwraps)
+  library(GenomicRanges)
+  library(R.utils)
+  library(MASS)
+})
+```
+
+#load bed files (mESC and megakaryocyte)
+
+```{r}
+bed_dif_h3k27me3 <- rtracklayer::import("ENCFF026IPZ.bed", format="narrowPeak")
+head(bed_dif_h3k27me3)
+```
+
+```{r}
+bed_dif_h3k4me3 <- rtracklayer::import("ENCFF661TZV.bed", format="narrowPeak")
+head(bed_dif_h3k4me3)
+```
+
+```{r}
+bed_H3K4me3 <- rtracklayer::import("ENCFF974BMC.bed", format = "narrowPeak")
+head(bed_H3K4me3)
+```
+
+```{r}
+bed_H3K27me3 <- rtracklayer::import("ENCFF008XKX.bed", format = "narrowPeak")
+head(bed_H3K27me3)
+```
+#find bivalent domains in mESC
+```{r}
+peaks_mESC <- overlapsAny(bed_H3K4me3, bed_H3K27me3)
+sum_peaks_mESC <- sum(peaks_mESC)
+sum_peaks_mESC
+```
+#subset makes vector that can be added to list
+
+```{r}
+subset <- bed_H3K4me3[peaks_mESC[TRUE]]
+head(subset)
+length(subset)
+```
+
+##which of these bivalent domains are overlapping either mark or their combination in megakaryocytes
+#make a list to use later in regionOverlaps function
+```{r}
+peaks_list <- list(bed_dif_h3k27me3 = bed_dif_h3k27me3, bed_dif_h3k4me3 = bed_dif_h3k4me3)
+```
+
+#compare overlaps between mESC bivalent domains and megakaryocyte peaks
+
+```{r}
+peaks_list$bivalent_domains <- subset
+regionOverlaps(peaks_list)
+regionUpset(peaks_list, nsets=length(peaks_list))
+```
