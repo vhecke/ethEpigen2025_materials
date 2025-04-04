@@ -26,8 +26,8 @@ ensdb <- ah[["AH89211"]] # mouse ensembldb object
 You can either start from the bam file:
 
 ```{r, eval=FALSE}
-download.file("https://ethz-ins.org/content/w7/atac.chr19.bam", "atac.chr19.bam")
-download.file("https://ethz-ins.org/content/w7/atac.chr19.bam.bai", "atac.chr19.bam.bai")
+download.file("https://ethz-ins.org/content/w7/atac.chr19.bam", "atac.chr19.bam", mode="wb")
+download.file("https://ethz-ins.org/content/w7/atac.chr19.bam.bai", "atac.chr19.bam.bai", mode="wb")
 ```
 
 Alternatively, if you're on a slow computer, you can also download the tracks that we're generating below, and then skip that step:
