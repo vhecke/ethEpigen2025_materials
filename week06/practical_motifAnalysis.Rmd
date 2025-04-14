@@ -4,7 +4,7 @@ author: "Pierre-Luc"
 output: html_document
 ---
 
-```{r}
+```{r setup}
 suppressPackageStartupMessages({
   library(AnnotationHub)
   library(GenomicRanges)
@@ -53,7 +53,7 @@ As this is methodologically fairly simple, it doesn't really matter what method 
 
 ```{r}
 # we search for "CTCF" in the motif database
-motifs <- query(MotifDb, "CTCF")
+motifs <- query(MotifDb, c("CTCF"))
 # there are several matching motifs:
 names(motifs)
 # we select one:
@@ -77,6 +77,7 @@ moi <- motifmatchr::matchMotifs(motif2, subject=peaks_chr1, genome=Rsamtools::Fa
                                 out="positions") # specify that we want the function to return the genomic positions of each motif match
 moi <- moi[[1]] # we scanned for just one motif, so we get the results for that motif
 head(moi)
+hist(moi$score)
 ```
 
 Then we could for instance ask questions such as how many of the peaks have a motif?
@@ -136,6 +137,10 @@ as.character(peak_seqs[1])
 # To avoid having redundant motifs, we query motifs from a single source:
 motifs <- query(MotifDb, c("Mmusculus", "HOCOMOCOv10"))
 ame <- memes::runAme(peak_seqs, database=convert_motifs(motifs), meme_path="~/meme/bin")
+saveRDS(ame, file="ame_results.rds")
+
+
+ame <- readRDS("ame_results.rds")
 head(ame)
 ```
 
@@ -152,7 +157,7 @@ ggplot(ame, aes(log2((1+tp)/(1+fp)), -log10(adj.pvalue), size=tp_percent)) +
 
 ```{r, eval=FALSE}
 # prepare multithreading (works only on mac/linux):
-registerCoresPWMEnrich(4)
+registerCoresPWMEnrich(6)
 # launch the analysis:
 res <- PWMEnrich::motifEnrichment(peak_seqs, convert_motifs(motifs, "PWMEnrich-PWM"))
 # visualize:
@@ -170,14 +175,14 @@ Motif **discovery** aims at finding _new motifs_ that are enriched in a set of s
 ## Example using Meme
 
 ```{r, eval=FALSE}
-# for the sake of example, we'll just use the first 100 sequences since this is computationally demanding:
-peak_seqs_subset <- head(peak_seqs,100)
+# for the sake of example, we'll just use the first 300 sequences since this is computationally demanding:
+peak_seqs_subset <- head(peak_seqs, 300)
 # this requires having the meme suite installed
 mr <- memes::runMeme( peak_seqs_subset, parse_genomic_coord = FALSE,
                       p=4, # use 4 threads
                       nmotifs=5, # determines how many motifs Meme will try to find
                       meme_path = "~/meme/bin/") # depending on your setup, you might need to specify where the meme binaries were installed
-
+saveRDS(mr, file="Meme_results.rds")
 # we could also specify a background using the `neg` argument, i.e. instead of 
 # looking for motifs against a random background, you can specify control (i.e. non-peak) sequences
 ```
@@ -185,12 +190,14 @@ mr <- memes::runMeme( peak_seqs_subset, parse_genomic_coord = FALSE,
 We could look at the top 3 motifs:
 
 ```{r}
+mr <- readRDS("Meme_results.rds")
 view_motifs(to_list(head(mr,3)))
 ```
 and compare the top motif to the CTCF motif we extracted from the database:
 
 ```{r}
-view_motifs(list(convert_motifs(motif), mr$motif[[1]]))
+view_motifs(list(convert_motifs(query(MotifDb, c("Mmusculus","HOCOMOCOv10","CTCF_MOUSE"))[[1]]),
+                 mr$motif[[1]]))
 ```
 
 
