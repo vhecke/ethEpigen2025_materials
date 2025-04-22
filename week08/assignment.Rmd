@@ -1,0 +1,127 @@
+---
+title: "assignment8"
+author: "Valerie Heckendorn"
+date: "2025-04-22"
+output: html_document
+---
+
+```{r}
+suppressPackageStartupMessages({
+  library(epiwraps)
+  library(motifmatchr)
+  library(MotifDb)
+  library(universalmotif)
+  library(ggplot2)
+  library(SummarizedExperiment) # data structure
+  library(sechm) # for plotting heatmaps from a SummrizedExperiment
+  library(BiocParallel) # for multithreading
+  library(chromVAR) # for motif accessibility estimation
+  library(limma) # for statistical analysis
+})
+```
+```{r, eval=FALSE}
+options(timeout=6000)
+download.file("https://ethz-ins.org/content/mouse_mm38_hippocampus.peakCounts.SE.rds","mm38hip_peakcounts.rds", mode="wb")
+getwd()
+```
+
+#Perform a ChromVAR motif analysis
+```{r}
+#fetch mouse genome 
+genome <- readDNAStringSet("~/polybox - Valerie Heckendorn (hvalerie@student.ethz.ch)@polybox.ethz.ch/Master/Bioinformatics/genome.fa", format="fasta")
+
+#get motifs (database JASPAR_CORE)
+motifs <- MotifDb::query(MotifDb, c("JASPAR_CORE", "Mmusculus"))
+length(motifs)
+```
+```{r}
+#convert motifs to PWM format and set names to their gene symbol
+motifs<- do.call(TFBSTools::PWMatrixList, setNames(
+           universalmotif::convert_motifs(motifs, class="TFBSTools-PWMatrix"),
+           mcols(motifs)$geneSymbol))
+
+
+se <- readRDS("/Users/valerieheckendorn/mm38hip_peakcounts.rds")
+
+colnames(se)
+```
+```{r}
+condition <- ifelse(grepl("^Control", colnames(se)), "CTRL", 
+                    ifelse(grepl("^FSS", colnames(se)), "FSS", NA))
+se$condition <- condition
+(colData(se))
+```
+```{r}
+#add GC Bias detection
+se <- chromVAR::addGCBias(se, genome=genome)
+
+#get motifs
+moi<- motifmatchr::matchMotifs(motifs, subject=se, genome=genome)
+
+#compute deviations by running chromVAR
+dev <- chromVAR::computeDeviations(se, annotations=moi, background_peaks=getBackgroundPeaks(se, niterations = 1000))
+dev
+colData(dev)
+```
+```{r}
+#compute variability to see what the most variable motifs are
+variability <- computeVariability(dev)
+
+#plot variability
+plotVariability(variability)
+```
+#comparing stressed and control
+```{r}
+# scale deviation scores
+head(assays(dev)$z)
+```
+```{r}
+assays(dev)$norm <- scale(assays(dev)$z)
+dev
+```
+```{r}
+dev$condition <- factor(dev$condition)
+#specify CTRL as baseline
+dev$condition <- relevel(dev$condition, "CTRL")
+#create model matrix
+mm <- model.matrix(~dev$condition)
+mm
+```
+```{r}
+tssfit <- eBayes(lmFit(assays(dev)$norm, mm))
+tssfit
+```
+```{r}
+tssfit$p.value
+```
+```{r}
+tss_res <- as.data.frame(topTable(tssfit, number = Inf))
+```
+```{r}
+tss_res$TF <- row.names(tss_res)
+ggplot(tss_res, aes(logFC, -log10(adj.P.Val), label=TF)) + geom_text()
+```
+```{r}
+sechm(dev, features = head(row.names(tss_res)), assayName="norm", top_annotation = c("condition", "depth"))
+```
+```{r}
+
+```
+#comparing male and female
+```{r}
+dev$gender <- c("F","F","F","M","M","M","F","F","F","M","M","M")
+dev$gender
+dev$gender <- factor(dev$gender)
+#specify female as baseline
+dev$gender <- relevel(dev$gender, c("F"))
+dev$gender
+```
+```{r}
+mmGender <- model.matrix(~dev$gender)
+mmGender
+```
+```{r}
+sechm(dev, features = head(row.names(tss_res)), assayName="norm", top_annotation = c("condition", "depth", "gender"))
+```
+Results:
+It seems as though NR3C1 motif accessability is significantly higher in males as well as in stressed animals.
