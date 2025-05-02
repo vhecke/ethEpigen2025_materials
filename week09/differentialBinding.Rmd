@@ -35,6 +35,12 @@ peaks <- lapply(peaks, FUN=rtracklayer::import)
 head(peaks[[1]])
 merged_peaks <- reduce(unlist(GRangesList(peaks)))
 head(merged_peaks)
+
+# if we wanted to keep peaks that are replicated:
+# merged_peaks2 <- reduce(unlist(GRangesList(peaks)), with.revmap=TRUE)
+# merged_peaks2 <- merged_peaks2[which(lengths(merged_peaks2$revmap)>1)]
+
+head(merged_peaks)
 ```
 
 Note that a good alternative to get consensus peaks across samples is to merge the reads from all samples, and call peaks on that.
@@ -90,6 +96,7 @@ If you think back to the biology of the dataset we are analyzing, does anything 
 ### Normalization based on library size
 
 ```{r}
+dds <- edgeR::DGEList(assay(se), group=se$condition)
 dds$samples$lib.size <- se$depth
 dds$samples$norm.factors <- 1
 dds <- estimateDisp(dds)
@@ -100,9 +107,9 @@ ggplot(et, aes(logFC, -log10(FDR))) + geom_point()
 ### Normalization based on common peaks
 
 ```{r}
-nf.ma <- epiwraps::getNormFactors(bams, peaks=peaks, method="MAnorm")
+nf.ma <- epiwraps::getNormFactors(bams, peaks=peaks, method="MAnorm", paired = TRUE)
 dds$samples$norm.factors <- nf.ma
-dds$samples$lib.size <- 1 # so that edgeR doesn't do extra libsize normalization
+dds$samples$lib.size <- median(se$depth) # so that edgeR doesn't do extra libsize normalization
 dds <- estimateDisp(dds)
 et <- as.data.frame(topTags(exactTest(dds), Inf))
 ggplot(et, aes(logFC, -log10(FDR))) + geom_point()
@@ -116,7 +123,7 @@ set.seed(123)
 # subsetted to chr9, we need to specify to use only that chromosome:
 nf.bg <- epiwraps::getNormFactors(bams, method="background", useSeqLevels = "9")
 dds$samples$norm.factors <- nf.bg
-dds$samples$lib.size <- 1
+dds$samples$lib.size <- median(se$depth)
 dds <- estimateDisp(dds)
 et <- as.data.frame(topTags(exactTest(dds), Inf))
 head(et)
@@ -131,7 +138,7 @@ tracks <- list.files("tracks/", full=TRUE)
 tracks
 sm <- signal2Matrix(tracks, rowRanges(se))
 
-sm <- renormalizeSignalMatrices(sm, scaleFactors=nf.bg)
+sm <- renormalizeSignalMatrices(sm, scaleFactors=nf.ma)
 plotEnrichedHeatmaps(sm, row_title="All chr9 Yy1 peaks")
 
 # just the 20 most significant regions
