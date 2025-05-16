@@ -60,7 +60,8 @@ chr1 <-  GRanges(seqnames=Rle(c("1")),
 
 # We define promoters as the regions +/- 200 of the TSS
 promoterRegions <- promoters(ensdb, upstream=200, downstream=200,
-                             filter=GRangesFilter(chr1))
+                             filter=GRangesFilter(chr1), columns=c("gene_name"))
+head(promoterRegions)
 ```
 
 gene body coordinates: 
@@ -124,10 +125,13 @@ We will use a BSseq object that contains data from embryonic stem cells (ESC) an
 
 ```{r}
 bs <- readRDS("ESC_astrocytes_BSseq.rds")
+bs
+
 # remove CpGs that have 0 coverage in some samples:
-bs <- bs[rowSums(assay(bs,"Cov")>1)==ncol(bs),]
+bs <- bs[rowSums(assay(bs,"Cov")>0)==ncol(bs),]
 
 design <- model.matrix(~celltype, data=pData(bs)) 
+design
 # adapt the design for methylation data:
 methdesign <- modelMatrixMeth(design)
 
@@ -145,7 +149,6 @@ proms <- promoters(genes)
 # we extract the promoters of genes of interest:
 myPromoters <- proms[c("GPR25", "MXRA8", "PLCH2", "GJC2", "PEAR1", "HSPG2")]
 metPr <- bsseq::getMeth(bs, regions=myPromoters, what="perRegion")
-colnames(metPr) <- colnames(bs)
 rownames(metPr) <- myPromoters$symbol
 
 # we plot their average methylation ratio across samples:
@@ -186,6 +189,11 @@ dmrRanges <- dmrRanges[order(abs(dmrRanges$meandiff), decreasing=TRUE)]
 DMR.plot(dmrRanges, dmr=2, phen.col=rep(c("blue","darkred"), each=2), group.means=TRUE,
          CpGs=bs, genome="hg19")
 ```
+
+```{r}
+bsseq::plotRegion(bs, region = dmrRanges[2], extend=1000, col=rep(c("darkblue","darkred"),each=2))
+```
+
 
 
 ### From a BSseq object to inputs for epiwraps
