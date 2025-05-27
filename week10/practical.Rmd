@@ -48,7 +48,7 @@ cl <- clusterSignalMatrices(ese, k=4)
 table(cl)
 head(cl)
 length(cl)
-length(regions)
+nrow(ese)
 
 # to make sure the cluster labels stay associated with the corresponding regions/rows
 # even if we manipulate the object, put them inside the rowData of the object:
@@ -101,6 +101,7 @@ ggplot(d, aes(position, mean, colour=sample)) + geom_line(size=1.2) + facet_wrap
 Clustering using relative signal instead:
 
 ```{r}
+set.seed(123)
 cl <- clusterSignalMatrices(ese, k=4, scaleRows = TRUE)
 d <- meltSignals(ese, splitBy=cl)
 ggplot(d, aes(position, mean, colour=sample)) + geom_line() + facet_wrap(~split)
@@ -117,10 +118,11 @@ Find what's enriched in one cluster with respect to the others:
 split_regions <- split(rowRanges(ese), rowData(ese)$cluster)
 lengths(split_regions)
 
-res <- great(split_regions[["4"]], gene_sets="GO:BP", tss_source="mm10", 
+res <- great(split_regions[["3"]], gene_sets="GO:BP", tss_source="mm10", 
              background=regions, cores=2)
 bp <- getEnrichmentTables(res)
 head(bp)
+
 ```
 
 We plot the top Biological Processes:
